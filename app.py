@@ -84,7 +84,7 @@ if uploaded_file:
             
             # Original image
             st.subheader("Original Image")
-            st.image(pil_img, caption="Uploaded MRI Image", use_container_width=False, width=200)
+            st.image(pil_img, caption="Uploaded MRI Image", width=200)
             st.session_state['status'] = "Image Loaded"
 
         if encrypt_button:
@@ -112,7 +112,7 @@ if uploaded_file:
                     progress.progress(i + 1)
                 encrypted_flat = st.session_state['encrypted_flat']
                 sort_indices = st.session_state['sort_indices']
-                chaotic_seq_dec = generate_chaotic_sequence(key_x0, key_r, total_pixels)
+                chaotic_seq_dec = generate_chaotic_sequence(key_x0, r, total_pixels)
                 decrypted_flat = np.bitwise_xor(encrypted_flat, chaotic_seq_dec)
                 inverse_indices = np.argsort(sort_indices)
                 decrypted_flat = decrypted_flat[inverse_indices]
@@ -127,13 +127,13 @@ if uploaded_file:
             col_enc, col_dec = st.columns([1, 1])
             with col_enc:
                 if 'encrypted_img' in st.session_state:
-                    st.image(st.session_state['encrypted_img'], caption="Encrypted Image", use_container_width=False, width=200)
+                    st.image(st.session_state['encrypted_img'], caption="Encrypted Image", width=200)
                     buf = io.BytesIO()
                     Image.fromarray(st.session_state['encrypted_img']).save(buf, format="PNG")
                     st.download_button("Download Encrypted Image", buf.getvalue(), "encrypted.png", key="download_encrypt")
             with col_dec:
                 if 'decrypted_img' in st.session_state:
-                    st.image(st.session_state['decrypted_img'], caption="Decrypted Image", use_container_width=False, width=200)
+                    st.image(st.session_state['decrypted_img'], caption="Decrypted Image", width=200)
                     buf = io.BytesIO()
                     Image.fromarray(st.session_state['decrypted_img']).save(buf, format="PNG")
                     st.download_button("Download Decrypted Image", buf.getvalue(), "decrypted.png", key="download_decrypt")
