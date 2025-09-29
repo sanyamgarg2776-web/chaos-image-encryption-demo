@@ -18,7 +18,7 @@ st.markdown("""
     .stFileUploader label {font-size: 14px; color: #1a3c6e; font-weight: bold; margin-bottom: 5px;}
     .stImage img {border: 3px solid #1a73e8 !important; border-radius: 10px; max-height: 200px; box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important; margin: 5px auto; display: block;}
     .header {text-align: center; color: #1a3c6e; font-size: 30px; font-weight: bold; margin: 8px 0;}
-    .subheader {text-align: center; color: #344))^4e57; font-size: 16px; margin-bottom: 10px;}
+    .subheader {text-align: center; color: #34495e; font-size: 16px; margin-bottom: 10px;}
     .project-text {text-align: center; color: #333; font-size: 14px; margin: 8px 0; background: #f8f9fa; padding: 10px; border-radius: 8px;}
     .status-bar {text-align: center; color: #2ba847; font-size: 14px; font-weight: bold; margin: 8px 0; background: #e6ffe6; padding: 5px; border-radius: 5px;}
 </style>
@@ -66,67 +66,78 @@ st.markdown("</div>", unsafe_allow_html=True)
 
 # Process image
 if uploaded_file:
-    with st.spinner("Processing image..."):
-        st.session_state['status'] = "Processing Image..."
-        img = np.array(Image.open(uploaded_file).convert('L'))
-        height, width = img.shape
-        total_pixels = height * width
-        flat_img = img.flatten()
-        chaotic_seq = generate_chaotic_sequence(key_x0, key_r, total_pixels)
-        sort_indices = np.argsort(chaotic_seq)
-        
-        # Original image
-        st.subheader("Original Image")
-        st.image(img, caption="Uploaded MRI Image", use_container_width=False, width=200)
-        st.session_state['status'] = "Image Loaded"
+    try:
+        with st.spinner("Processing image..."):
+            st.session_state['status'] = "Processing Image..."
+            # Convert uploaded image to PIL and then to NumPy array
+            pil_img = Image.open(uploaded_file).convert('L')
+            img = np.array(pil_img, dtype=np.uint8)  # Ensure uint8 dtype
+            if len(img.shape) != 2:  # Check if grayscale
+                st.error("Please upload a grayscale image.")
+                st.session_state['status'] = "Invalid Image Format"
+                st.stop()
+            height, width = img.shape
+            total_pixels = height * width
+            flat_img = img.flatten()
+            chaotic_seq = generate_chaotic_sequence(key_x0, key_r, total_pixels)
+            sort_indices = np.argsort(chaotic_seq)
+            
+            # Original image
+            st.subheader("Original Image")
+            st.image(pil_img, caption="Uploaded MRI Image", use_container_width=False, width=200)
+            st.session_state['status'] = "Image Loaded"
 
-    if encrypt_button:
-        with st.spinner("Encrypting..."):
-            st.session_state['status'] = "Encrypting Image..."
-            progress = st.progress(0)
-            for i in range(100):
-                time.sleep(0.01)
-                progress.progress(i + 1)
-            encrypted_flat = flat_img[sort_indices]
-            encrypted_flat = np.bitwise_xor(encrypted_flat, chaotic_seq)
-            encrypted_img = encrypted_flat.reshape((height, width)).astype(np.uint8)
-            st.session_state['encrypted_flat'] = encrypted_flat
-            st.session_state['sort_indices'] = sort_indices
-            st.session_state['encrypted_img'] = encrypted_img
-            st.session_state['status'] = "Encryption Complete"
-            st.success("Encryption complete! Image is secure.")
+        if encrypt_button:
+            with st.spinner("Encrypting..."):
+                st.session_state['status'] = "Encrypting Image..."
+                progress = st.progress(0)
+                for i in range(100):
+                    time.sleep(0.01)
+                    progress.progress(i + 1)
+                encrypted_flat = flat_img[sort_indices]
+                encrypted_flat = np.bitwise_xor(encrypted_flat, chaotic_seq)
+                encrypted_img = encrypted_flat.reshape((height, width)).astype(np.uint8)
+                st.session_state['encrypted_flat'] = encrypted_flat
+                st.session_state['sort_indices'] = sort_indices
+                st.session_state['encrypted_img'] = encrypted_img
+                st.session_state['status'] = "Encryption Complete"
+                st.success("Encryption complete! Image is secure.")
 
-    if decrypt_button and 'encrypted_flat' in st.session_state:
-        with st.spinner("Decrypting..."):
-            st.session_state['status'] = "Decrypting Image..."
-            progress = st.progress(0)
-            for i in range(100):
-                time.sleep(0.01)
-                progress.progress(i + 1)
-            encrypted_flat = st.session_state['encrypted_flat']
-            sort_indices = st.session_state['sort_indices']
-            chaotic_seq_dec = generate_chaotic_sequence(key_x0, key_r, total_pixels)
-            decrypted_flat = np.bitwise_xor(encrypted_flat, chaotic_seq_dec)
-            inverse_indices = np.argsort(sort_indices)
-            decrypted_flat = decrypted_flat[inverse_indices]
-            decrypted_img = decrypted_flat.reshape((height, width)).astype(np.uint8)
-            st.session_state['decrypted_img'] = decrypted_img
-            st.session_state['status'] = "Decryption Complete"
-            st.success("Decryption complete! Verify the image matches the original.")
+        if decrypt_button and 'encrypted_flat' in st.session_state:
+            with st.spinner("Decrypting..."):
+                st.session_state['status'] = "Decrypting Image..."
+                progress = st.progress(0)
+                for i in range(100):
+                    time.sleep(0.01)
+                    progress.progress(i + 1)
+                encrypted_flat = st.session_state['encrypted_flat']
+                sort_indices = st.session_state['sort_indices']
+                chaotic_seq_dec = generate_chaotic_sequence(key_x0, key_r, total_pixels)
+                decrypted_flat = np.bitwise_xor(encrypted_flat, chaotic_seq_dec)
+                inverse_indices = np.argsort(sort_indices)
+                decrypted_flat = decrypted_flat[inverse_indices]
+                decrypted_img = decrypted_flat.reshape((height, width)).astype(np.uint8)
+                st.session_state['decrypted_img'] = decrypted_img
+                st.session_state['status'] = "Decryption Complete"
+                st.success("Decryption complete! Verify the image matches the original.")
 
-    # Side-by-side encrypted and decrypted images
-    if 'encrypted_img' in st.session_state or 'decrypted_img' in st.session_state:
-        st.subheader("Results")
-        col_enc, col_dec = st.columns([1, 1])
-        with col_enc:
-            if 'encrypted_img' in st.session_state:
-                st.image(st.session_state['encrypted_img'], caption="Encrypted Image", use_container_width=False, width=200)
-                buf = io.BytesIO()
-                Image.fromarray(st.session_state['encrypted_img']).save(buf, format="PNG")
-                st.download_button("Download Encrypted Image", buf.getvalue(), "encrypted.png", key="download_encrypt")
-        with col_dec:
-            if 'decrypted_img' in st.session_state:
-                st.image(st.session_state['decrypted_img'], caption="Decrypted Image", use_container_width=False, width=200)
-                buf = io.BytesIO()
-                Image.fromarray(st.session_state['decrypted_img']).save(buf, format="PNG")
-                st.download_button("Download Decrypted Image", buf.getvalue(), "decrypted.png", key="download_decrypt")
+        # Side-by-side encrypted and decrypted images
+        if 'encrypted_img' in st.session_state or 'decrypted_img' in st.session_state:
+            st.subheader("Results")
+            col_enc, col_dec = st.columns([1, 1])
+            with col_enc:
+                if 'encrypted_img' in st.session_state:
+                    st.image(st.session_state['encrypted_img'], caption="Encrypted Image", use_container_width=False, width=200)
+                    buf = io.BytesIO()
+                    Image.fromarray(st.session_state['encrypted_img']).save(buf, format="PNG")
+                    st.download_button("Download Encrypted Image", buf.getvalue(), "encrypted.png", key="download_encrypt")
+            with col_dec:
+                if 'decrypted_img' in st.session_state:
+                    st.image(st.session_state['decrypted_img'], caption="Decrypted Image", use_container_width=False, width=200)
+                    buf = io.BytesIO()
+                    Image.fromarray(st.session_state['decrypted_img']).save(buf, format="PNG")
+                    st.download_button("Download Decrypted Image", buf.getvalue(), "decrypted.png", key="download_decrypt")
+    except Exception as e:
+        st.error(f"Error processing image: {str(e)}")
+        st.session_state['status'] = "Image Processing Failed"
+        st.stop()
