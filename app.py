@@ -112,7 +112,7 @@ if uploaded_file:
                     progress.progress(i + 1)
                 encrypted_flat = st.session_state['encrypted_flat']
                 sort_indices = st.session_state['sort_indices']
-                chaotic_seq_dec = generate_chaotic_sequence(key_x0, r, total_pixels)
+                chaotic_seq_dec = generate_chaotic_sequence(key_x0, key_r, total_pixels)
                 decrypted_flat = np.bitwise_xor(encrypted_flat, chaotic_seq_dec)
                 inverse_indices = np.argsort(sort_indices)
                 decrypted_flat = decrypted_flat[inverse_indices]
